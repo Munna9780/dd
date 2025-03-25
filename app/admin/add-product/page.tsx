@@ -2,65 +2,52 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 
 export default function AddProductPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    price: "",
-    image_url: "",
-    category: ""
-  })
+  const [message, setMessage] = useState("")
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
-
-  const handleCategoryChange = (value: string) => {
-    setFormData(prev => ({ ...prev, category: value }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
+    setMessage("")
+
+    const formData = new FormData(e.currentTarget)
+    const product = {
+      name: formData.get("name"),
+      description: formData.get("description"),
+      price: parseFloat(formData.get("price") as string),
+      image_url: formData.get("image_url"),
+      category: formData.get("category"),
+      artist: formData.get("artist"),
+      affiliateLink: formData.get("affiliateLink")
+    }
 
     try {
-      const { error } = await supabase
-        .from("products")
-        .insert([
-          {
-            name: formData.name,
-            description: formData.description,
-            price: parseFloat(formData.price),
-            image_url: formData.image_url,
-            category: formData.category
-          }
-        ])
-
-      if (error) throw error
-
-      toast.success("Product added successfully!")
-      router.refresh()
-      setFormData({
-        name: "",
-        description: "",
-        price: "",
-        image_url: "",
-        category: ""
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(product),
       })
+
+      if (!response.ok) {
+        throw new Error('Failed to add product')
+      }
+
+      const result = await response.json()
+      setMessage("Product added successfully!")
+      e.currentTarget.reset()
+      router.refresh()
     } catch (error) {
-      toast.error("Error adding product")
-      console.error(error)
+      console.error('Error adding product:', error)
+      setMessage("Error adding product. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -88,9 +75,8 @@ export default function AddProductPage() {
               <Input
                 id="name"
                 name="name"
-                value={formData.name}
-                onChange={handleChange}
                 required
+                className="w-full p-2 border rounded"
               />
             </div>
 
@@ -101,9 +87,9 @@ export default function AddProductPage() {
               <Textarea
                 id="description"
                 name="description"
-                value={formData.description}
-                onChange={handleChange}
                 required
+                className="w-full p-2 border rounded"
+                rows={3}
               />
             </div>
 
@@ -115,10 +101,10 @@ export default function AddProductPage() {
                 id="price"
                 name="price"
                 type="number"
-                step="0.01"
-                value={formData.price}
-                onChange={handleChange}
                 required
+                min="0"
+                step="0.01"
+                className="w-full p-2 border rounded"
               />
             </div>
 
@@ -130,9 +116,8 @@ export default function AddProductPage() {
                 id="image_url"
                 name="image_url"
                 type="url"
-                value={formData.image_url}
-                onChange={handleChange}
                 required
+                className="w-full p-2 border rounded"
               />
             </div>
 
@@ -140,22 +125,38 @@ export default function AddProductPage() {
               <label htmlFor="category" className="block text-sm font-medium mb-2">
                 Category
               </label>
-              <Select value={formData.category} onValueChange={handleCategoryChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="paintings">Paintings</SelectItem>
-                  <SelectItem value="prints">Prints</SelectItem>
-                  <SelectItem value="photography">Photography</SelectItem>
-                  <SelectItem value="sculptures">Sculptures</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="category"
+                name="category"
+                required
+                className="w-full p-2 border rounded"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="artist" className="block text-sm font-medium mb-2">
+                Artist (Optional)
+              </label>
+              <Input
+                id="artist"
+                name="artist"
+                className="w-full p-2 border rounded"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="affiliateLink" className="block text-sm font-medium mb-2">
+                Affiliate Link (Optional)
+              </label>
+              <Input
+                id="affiliateLink"
+                name="affiliateLink"
+                type="url"
+                className="w-full p-2 border rounded"
+              />
             </div>
           </div>
         </div>
-
-        <Separator />
 
         <div className="flex justify-end gap-4">
           <Button variant="outline" type="button" onClick={() => router.back()}>
@@ -165,6 +166,14 @@ export default function AddProductPage() {
             {loading ? "Adding..." : "Add Product"}
           </Button>
         </div>
+
+        {message && (
+          <p className={`mt-4 p-4 rounded ${
+            message.includes("Error") ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+          }`}>
+            {message}
+          </p>
+        )}
       </form>
     </div>
   )

@@ -1,17 +1,26 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
-import type { Product } from "@/lib/supabase"
-import Image from "next/image"
-import { ExternalLink, Info, ZoomIn } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
+import Image from "next/image"
+import { ExternalLink, Info, ZoomIn } from "lucide-react"
+
+export type Product = {
+  id: string
+  name: string
+  description: string
+  price: number
+  image_url: string
+  category: string
+  artist?: string
+  affiliateLink?: string
+  created_at: string
+  isNew?: boolean
+}
 
 export default function ProductGrid() {
   const [products, setProducts] = useState<Product[]>([])
@@ -20,51 +29,31 @@ export default function ProductGrid() {
   const [activeCategory, setActiveCategory] = useState("All")
 
   useEffect(() => {
-    // Initial fetch
-    const fetchProducts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .order("created_at", { ascending: false })
-        
-        if (error) throw error
-        if (data) setProducts(data)
-      } catch (error) {
-        console.error("Error fetching products:", error)
-      } finally {
+    // Initial fetch of products
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        setProducts(data)
         setLoading(false)
-      }
-    }
+      })
+      .catch(error => {
+        console.error('Error fetching products:', error)
+        setLoading(false)
+      })
 
-    fetchProducts()
+    // Set up polling for updates every 5 seconds
+    const interval = setInterval(() => {
+      fetch('/api/products')
+        .then(res => res.json())
+        .then(data => {
+          setProducts(data)
+        })
+        .catch(error => {
+          console.error('Error fetching products:', error)
+        })
+    }, 5000)
 
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('public:products')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'products' 
-        }, 
-        (payload: RealtimePostgresChangesPayload<Product>) => {
-          if (payload.eventType === 'INSERT') {
-            setProducts((prev: Product[]) => [payload.new as Product, ...prev])
-          } else if (payload.eventType === 'DELETE') {
-            setProducts((prev: Product[]) => prev.filter(product => product.id !== payload.old.id))
-          } else if (payload.eventType === 'UPDATE') {
-            setProducts((prev: Product[]) => prev.map(product => 
-              product.id === payload.new.id ? payload.new as Product : product
-            ))
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => clearInterval(interval)
   }, [])
 
   if (loading) {
