@@ -1,0 +1,4 @@
+name,description,price,image_url,category,artist,affiliateLink
+"Modern Art Print","Beautiful modern art print perfect for any room",49.99,"https://picsum.photos/400/400","Art","John Doe","https://example.com/product1"
+"Abstract Canvas","Large abstract canvas with vibrant colors",129.99,"https://picsum.photos/400/400","Art","Jane Smith","https://example.com/product2"
+"Digital Illustration","Unique digital art piece",79.99,"https://picsum.photos/400/400","Digital","Mike Johnson","https://example.com/product3"
