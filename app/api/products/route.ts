@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
+import { PrismaClient } from '@prisma/client'
 import type { Context } from '@netlify/edge-functions'
+
+const prisma = new PrismaClient()
 
 export const config = {
   runtime: 'edge',
@@ -8,8 +11,12 @@ export const config = {
 // Get all products
 export async function GET(req: Request, context: Context) {
   try {
-    const products = await context.env.PRODUCTS.get('products')
-    return NextResponse.json(products ? JSON.parse(products) : [])
+    const products = await prisma.product.findMany({
+      orderBy: {
+        created_at: 'desc'
+      }
+    })
+    return NextResponse.json(products)
   } catch (error) {
     console.error('Error reading products:', error)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
@@ -19,26 +26,25 @@ export async function GET(req: Request, context: Context) {
 // Add a new product
 export async function POST(req: Request, context: Context) {
   try {
-    const product = await req.json()
-    const productsStr = await context.env.PRODUCTS.get('products')
-    const products = productsStr ? JSON.parse(productsStr) : []
-    
-    // Add new product with generated ID and timestamp
-    const newProduct = {
-      ...product,
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString()
-    }
-    
-    products.unshift(newProduct)
-    await context.env.PRODUCTS.put('products', JSON.stringify(products))
+    const data = await req.json()
+    const product = await prisma.product.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        price: parseFloat(data.price.toString()),
+        image_url: data.image_url,
+        category: data.category,
+        artist: data.artist,
+        affiliateLink: data.affiliateLink
+      }
+    })
 
     // Trigger revalidation
     await fetch(`${req.headers.get('origin')}/api/revalidate?tag=products`, {
       method: 'POST'
     })
 
-    return NextResponse.json(newProduct)
+    return NextResponse.json(product)
   } catch (error) {
     console.error('Error adding product:', error)
     return NextResponse.json({ error: 'Failed to add product' }, { status: 500 })
@@ -49,24 +55,20 @@ export async function POST(req: Request, context: Context) {
 export async function PUT(req: Request, context: Context) {
   try {
     const { id, ...updates } = await req.json()
-    const productsStr = await context.env.PRODUCTS.get('products')
-    const products = productsStr ? JSON.parse(productsStr) : []
-    
-    const index = products.findIndex((p: any) => p.id === id)
-    if (index === -1) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
-    }
-
-    const updatedProduct = { ...products[index], ...updates }
-    products[index] = updatedProduct
-    await context.env.PRODUCTS.put('products', JSON.stringify(products))
+    const product = await prisma.product.update({
+      where: { id },
+      data: {
+        ...updates,
+        price: updates.price ? parseFloat(updates.price.toString()) : undefined
+      }
+    })
 
     // Trigger revalidation
     await fetch(`${req.headers.get('origin')}/api/revalidate?tag=products`, {
       method: 'POST'
     })
 
-    return NextResponse.json(updatedProduct)
+    return NextResponse.json(product)
   } catch (error) {
     console.error('Error updating product:', error)
     return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
@@ -77,11 +79,9 @@ export async function PUT(req: Request, context: Context) {
 export async function DELETE(req: Request, context: Context) {
   try {
     const { id } = await req.json()
-    const productsStr = await context.env.PRODUCTS.get('products')
-    const products = productsStr ? JSON.parse(productsStr) : []
-    
-    const filteredProducts = products.filter((p: any) => p.id !== id)
-    await context.env.PRODUCTS.put('products', JSON.stringify(filteredProducts))
+    await prisma.product.delete({
+      where: { id }
+    })
 
     // Trigger revalidation
     await fetch(`${req.headers.get('origin')}/api/revalidate?tag=products`, {

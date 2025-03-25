@@ -2,16 +2,18 @@
   command = "npm run build"
   publish = ".next"
 
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_USE_NETLIFY_EDGE = "true"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
 [functions]
+  node_bundler = "esbuild"
   external_node_modules = ["@socket.io/redis-adapter", "redis"]
   
 [[redirects]]
-  from = "/api/socketio/*"
-  to = "/.netlify/functions/socketio/:splat"
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
   status = 200
-
-[build.environment]
-  NEXT_USE_NETLIFY_EDGE = "true"
