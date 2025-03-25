@@ -19,40 +19,46 @@ export default function HomePage() {
   }, []);
 
   if (loading) {
-    return <div style={{ padding: '20px' }}>Loading products...</div>;
+    return <div className="p-8 text-center">Loading products...</div>;
   }
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>Product List</h1>
+    <div className="container mx-auto p-8">
+      <h1 className="text-3xl font-bold mb-8">Product Gallery</h1>
       
       {products.length === 0 ? (
-        <p>No products available.</p>
+        <div className="text-center py-10 text-gray-500">
+          <p className="text-xl">No products available.</p>
+          <p className="mt-2">Check back soon for new items.</p>
+        </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {products.map((product: any) => (
-            <div key={product.id} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px' }}>
-              <h2 style={{ fontSize: '18px', marginBottom: '10px' }}>{product.name}</h2>
-              <p style={{ color: '#0070f3', fontWeight: 'bold', marginBottom: '10px' }}>${product.price}</p>
-              <p style={{ fontSize: '14px', color: '#666' }}>{product.description}</p>
-              {product.affiliateLink && (
-                <a 
-                  href={product.affiliateLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    marginTop: '15px',
-                    padding: '8px 16px',
-                    backgroundColor: '#0070f3',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '4px'
-                  }}
-                >
-                  Buy Now
-                </a>
+            <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+              {product.image_url && (
+                <div className="h-48 bg-gray-100 overflow-hidden">
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               )}
+              <div className="p-4">
+                <h2 className="text-lg font-semibold mb-2">{product.name}</h2>
+                <p className="text-blue-600 font-bold mb-2">${product.price?.toFixed(2)}</p>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{product.description}</p>
+                {product.affiliateLink && (
+                  <a 
+                    href={product.affiliateLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors duration-300"
+                  >
+                    Buy Now
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>
